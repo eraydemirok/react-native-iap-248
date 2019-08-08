@@ -234,6 +234,96 @@ RCT_EXPORT_METHOD(buyPromotedProduct:(RCTPromiseResolveBlock)resolve
   }
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+// FATCH V2
+
+/*
+ * Kullanıcının bitirilmemiş satın alma geçmişini döner.
+ */
+RCT_EXPORT_METHOD(getPendingPurchases:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+    
+    //
+    [self addPromiseForKey:@"getPendingPurchases" resolve:resolve reject:reject];
+    
+    //
+    NSMutableArray *transactionsArrayForJS = [NSMutableArray array];
+    
+    //
+    for (SKPaymentTransaction *transaction in [SKPaymentQueue defaultQueue].transactions) {
+        //
+        NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithDictionary: @{
+                                                                                         @"date": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
+                                                                                         @"identifier": transaction.transactionIdentifier,
+                                                                                         @"productIdentifier": transaction.payment.productIdentifier,
+                                                                                         @"state": StringForTransactionState(transaction.transactionState)
+                                                                                         }];
+        //
+        SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
+        
+        //
+        if(transaction.transactionReceipt) {
+            purchase[@"receipt"] = [[transaction transactionReceipt] base64EncodedStringWithOptions:0];
+        }
+        
+        //
+        if (originalTransaction) {
+            purchase[@"originalTransactionDate"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
+            purchase[@"originalTransactionIdentifier"] = originalTransaction.transactionIdentifier;
+        }
+        
+        //
+        [transactionsArrayForJS addObject:purchase];
+    }
+
+    //
+    [self resolvePromisesForKey:@"getPendingPurchases" value:transactionsArrayForJS];
+}
+
+/*
+ *
+ */
+RCT_EXPORT_METHOD(finishPendingPurchases:(NSString*)transactionIdentifier
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+    
+    //
+    [self addPromiseForKey:@"finishPendingPurchases" resolve:resolve reject:reject];
+
+    //
+    for (SKPaymentTransaction *transaction in [SKPaymentQueue defaultQueue].transactions) {
+        if ([transaction.transactionIdentifier isEqualToString:transactionIdentifier]) {
+            if (transaction.transactionState == SKPaymentTransactionStatePurchased) {
+                [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
+                [self resolvePromisesForKey:@"finishPendingPurchases" value:@[[NSNull null]]];
+            } else {
+                [self resolvePromisesForKey:@"finishPendingPurchases" value:@[@"invalid_purchase"]];
+            }
+            return;
+        }
+    }
+}
+
+/*
+ * Satın alma verisinin durumunu filtreler.
+ */
+static NSString *StringForTransactionState(SKPaymentTransactionState state)
+{
+    switch(state) {
+        case SKPaymentTransactionStatePurchasing: return @"purchasing";
+        case SKPaymentTransactionStatePurchased: return @"purchased";
+        case SKPaymentTransactionStateFailed: return @"failed";
+        case SKPaymentTransactionStateRestored: return @"restored";
+        case SKPaymentTransactionStateDeferred: return @"deferred";
+    }
+    
+    [NSException raise:NSGenericException format:@"Unexpected SKPaymentTransactionState."];
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+
 #pragma mark ===== StoreKit Delegate
 
 -(void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response {
