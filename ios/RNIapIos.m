@@ -254,23 +254,23 @@ RCT_EXPORT_METHOD(getPendingPurchases:(RCTPromiseResolveBlock)resolve
     for (SKPaymentTransaction *transaction in [SKPaymentQueue defaultQueue].transactions) {
         //
         NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithDictionary: @{
-                                                                                         @"date": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
-                                                                                         @"identifier": transaction.transactionIdentifier,
-                                                                                         @"productIdentifier": transaction.payment.productIdentifier,
-                                                                                         @"state": StringForTransactionState(transaction.transactionState)
+                                                                                         @"transactionDate": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
+                                                                                         @"transactionId": transaction.transactionIdentifier,
+                                                                                         @"productId": transaction.payment.productIdentifier,
+                                                                                         @"transactionState": StringForTransactionState(transaction.transactionState)
                                                                                          }];
         //
         SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
         
         //
         if(transaction.transactionReceipt) {
-            purchase[@"receipt"] = [[transaction transactionReceipt] base64EncodedStringWithOptions:0];
+            purchase[@"transactionReceipt"] = [[transaction transactionReceipt] base64EncodedStringWithOptions:0];
         }
         
         //
         if (originalTransaction) {
-            purchase[@"originalTransactionDate"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
-            purchase[@"originalTransactionIdentifier"] = originalTransaction.transactionIdentifier;
+            purchase[@"originalTransactionDateIOS"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
+            purchase[@"originalTransactionIdentifierIOS"] = originalTransaction.transactionIdentifier;
         }
         
         //
@@ -284,7 +284,7 @@ RCT_EXPORT_METHOD(getPendingPurchases:(RCTPromiseResolveBlock)resolve
 /*
  *
  */
-RCT_EXPORT_METHOD(finishPendingPurchases:(NSString*)transactionIdentifier
+RCT_EXPORT_METHOD(finishPendingPurchases:(NSString*)transactionId
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject) {
     
@@ -293,7 +293,7 @@ RCT_EXPORT_METHOD(finishPendingPurchases:(NSString*)transactionIdentifier
 
     //
     for (SKPaymentTransaction *transaction in [SKPaymentQueue defaultQueue].transactions) {
-        if ([transaction.transactionIdentifier isEqualToString:transactionIdentifier]) {
+        if ([transaction.transactionIdentifier isEqualToString:transactionId]) {
             if (transaction.transactionState == SKPaymentTransactionStatePurchased) {
                 [[SKPaymentQueue defaultQueue] finishTransaction:transaction];
                 [self resolvePromisesForKey:@"finishPendingPurchases" value:@[[NSNull null]]];
