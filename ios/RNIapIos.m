@@ -251,31 +251,35 @@ RCT_EXPORT_METHOD(getPendingPurchases:(RCTPromiseResolveBlock)resolve
     NSMutableArray *transactionsArrayForJS = [NSMutableArray array];
     
     //
-    for (SKPaymentTransaction *transaction in [SKPaymentQueue defaultQueue].transactions) {
-        //
-        NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithDictionary: @{
-                                                                                         @"transactionDate": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
-                                                                                         @"transactionId": transaction.transactionIdentifier,
-                                                                                         @"productId": transaction.payment.productIdentifier,
-                                                                                         @"transactionState": StringForTransactionState(transaction.transactionState)
-                                                                                         }];
-        //
-        SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
-        
-        //
-        if(transaction.transactionReceipt) {
-            purchase[@"transactionReceipt"] = [[transaction transactionReceipt] base64EncodedStringWithOptions:0];
+    @try
+    {
+        for (SKPaymentTransaction *transaction in [SKPaymentQueue defaultQueue].transactions) {
+            //
+            NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithDictionary: @{
+                                                                                             @"transactionDate": @(transaction.transactionDate.timeIntervalSince1970 * 1000),
+                                                                                             @"transactionId": transaction.transactionIdentifier,
+                                                                                             @"productId": transaction.payment.productIdentifier,
+                                                                                             @"transactionState": StringForTransactionState(transaction.transactionState)
+                                                                                             }];
+            //
+            SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
+            
+            //
+            if (transaction.transactionReceipt) {
+                purchase[@"transactionReceipt"] = [[transaction transactionReceipt] base64EncodedStringWithOptions:0];
+            }
+            
+            //
+            if (originalTransaction) {
+                purchase[@"originalTransactionDateIOS"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
+                purchase[@"originalTransactionIdentifierIOS"] = originalTransaction.transactionIdentifier;
+            }
+            
+            //
+            [transactionsArrayForJS addObject:purchase];
         }
-        
-        //
-        if (originalTransaction) {
-            purchase[@"originalTransactionDateIOS"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
-            purchase[@"originalTransactionIdentifierIOS"] = originalTransaction.transactionIdentifier;
-        }
-        
-        //
-        [transactionsArrayForJS addObject:purchase];
     }
+    @catch (NSException *exception) {}  
 
     //
     [self resolvePromisesForKey:@"getPendingPurchases" value:transactionsArrayForJS];
