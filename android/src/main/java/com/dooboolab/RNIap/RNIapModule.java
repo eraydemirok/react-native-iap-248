@@ -303,6 +303,21 @@ public class RNIapModule extends ReactContextBaseJavaModule {
             if (type.equals(BillingClient.SkuType.SUBS)) {
               item.putBoolean("autoRenewingAndroid", json.getBoolean("autoRenewing"));
             }
+            
+            ////////////////////////////////////////////////
+
+            item.putString("purchaseType", type);
+
+            try 
+            {
+              item.putInt("purchaseState", json.getInt("purchaseState"));
+            }
+            catch (Exception e)
+            {
+              item.putInt("purchaseState", 666);
+            }
+
+            ////////////////////////////////////////////////
 
             items.pushMap(item);
           } catch (JSONException e) {
